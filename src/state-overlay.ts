@@ -20,6 +20,12 @@ export interface StateVisualization {
   ctm: Matrix;
   /** Accumulated clipping paths (each entry is one W/W* clip). */
   clipPaths: ClipPath[];
+  /** Text state: matrix and whether we're inside a BT..ET block. */
+  text: {
+    active: boolean;
+    matrix: Matrix;
+    lineMatrix: Matrix;
+  } | null;
 }
 
 const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0];
@@ -60,6 +66,10 @@ export function computeStateAt(
   let curX = 0, curY = 0;
   let startX = 0, startY = 0;
   let hasPoint = false;
+  let textLeading = 0;
+  let inText = false;
+  let textMatrix: Matrix = [...IDENTITY];
+  let textLineMatrix: Matrix = [...IDENTITY];
 
   // Accumulate current path for potential clipping
   let pathSegs: ClipPath['segments'] = [];
@@ -140,6 +150,56 @@ export function computeStateAt(
         if (clipStack.length > 0) clipPaths = clipStack.pop()!;
         break;
 
+      // Text object
+      case 'BT':
+        inText = true;
+        textMatrix = [...IDENTITY];
+        textLineMatrix = [...IDENTITY];
+        break;
+      case 'ET':
+        inText = false;
+        break;
+
+      // Text positioning
+      case 'Tm':
+        if (nums.length >= 6) {
+          textMatrix = [nums[0], nums[1], nums[2], nums[3], nums[4], nums[5]];
+          textLineMatrix = [...textMatrix];
+        }
+        break;
+      case 'Td':
+        if (nums.length >= 2) {
+          textLineMatrix = concatMatrix(textLineMatrix, 1, 0, 0, 1, nums[0], nums[1]);
+          textMatrix = [...textLineMatrix];
+        }
+        break;
+      case 'TD':
+        if (nums.length >= 2) {
+          textLeading = -nums[1];
+          textLineMatrix = concatMatrix(textLineMatrix, 1, 0, 0, 1, nums[0], nums[1]);
+          textMatrix = [...textLineMatrix];
+        }
+        break;
+      case 'T*':
+        textLineMatrix = concatMatrix(textLineMatrix, 1, 0, 0, 1, 0, -textLeading);
+        textMatrix = [...textLineMatrix];
+        break;
+      case 'TL':
+        if (nums.length >= 1) textLeading = nums[0];
+        break;
+
+      // Text rendering (advance position is font-dependent, tracked as-is)
+      case "'":
+        // Equivalent to T* then Tj
+        textLineMatrix = concatMatrix(textLineMatrix, 1, 0, 0, 1, 0, -textLeading);
+        textMatrix = [...textLineMatrix];
+        break;
+      case '"':
+        // Equivalent to Tw Tc T* Tj
+        textLineMatrix = concatMatrix(textLineMatrix, 1, 0, 0, 1, 0, -textLeading);
+        textMatrix = [...textLineMatrix];
+        break;
+
       default:
         // Paint ops clear path
         if (PAINT_OPS.has(op.operator)) {
@@ -154,6 +214,7 @@ export function computeStateAt(
     currentPoint: hasPoint ? { x: curX, y: curY } : null,
     ctm,
     clipPaths,
+    text: inText ? { active: true, matrix: textMatrix, lineMatrix: textLineMatrix } : null,
   };
 }
 
@@ -284,6 +345,61 @@ export function drawStateOverlay(
     ctx.arc(px, py, 2.5 * dpr, 0, Math.PI * 2);
     ctx.fillStyle = '#ff00ff';
     ctx.fill();
+  }
+
+  // 4. Draw text position and text matrix axes (blue/cyan, inside BT..ET only)
+  if (state.text) {
+    const tm = state.text.matrix;
+    // Text rendering matrix = Tm × CTM
+    const trm: Matrix = [
+      tm[0] * state.ctm[0] + tm[1] * state.ctm[2],
+      tm[0] * state.ctm[1] + tm[1] * state.ctm[3],
+      tm[2] * state.ctm[0] + tm[3] * state.ctm[2],
+      tm[2] * state.ctm[1] + tm[3] * state.ctm[3],
+      tm[4] * state.ctm[0] + tm[5] * state.ctm[2] + state.ctm[4],
+      tm[4] * state.ctm[1] + tm[5] * state.ctm[3] + state.ctm[5],
+    ];
+
+    // Text origin in canvas coords
+    const [tox, toy] = [trm[4] * scaleX, (pageHeight - trm[5]) * scaleY];
+
+    // Text matrix axes
+    ctx.globalAlpha = 0.9;
+    ctx.setLineDash([]);
+    const tAxisLen = 30 * dpr;
+
+    const [txRaw, tyRaw] = [trm[0], trm[1]];
+    const [tyxRaw, tyyRaw] = [trm[2], trm[3]];
+    const txMag = Math.sqrt(txRaw * txRaw + tyRaw * tyRaw);
+    const tyMag = Math.sqrt(tyxRaw * tyxRaw + tyyRaw * tyyRaw);
+
+    if (txMag > 0.001) {
+      const xDirX = (txRaw / txMag) * tAxisLen * scaleX;
+      const xDirY = -(tyRaw / txMag) * tAxisLen * scaleY;
+      drawArrow(ctx, tox, toy, tox + xDirX, toy + xDirY, '#4488ff', 1.5 * dpr, 5 * dpr);
+      ctx.fillStyle = '#4488ff';
+      ctx.font = `${10 * dpr}px monospace`;
+      ctx.fillText('Tx', tox + xDirX + 3 * dpr, toy + xDirY + 3 * dpr);
+    }
+
+    if (tyMag > 0.001) {
+      const yDirX = (tyxRaw / tyMag) * tAxisLen * scaleX;
+      const yDirY = -(tyyRaw / tyMag) * tAxisLen * scaleY;
+      drawArrow(ctx, tox, toy, tox + yDirX, toy + yDirY, '#44dddd', 1.5 * dpr, 5 * dpr);
+      ctx.fillStyle = '#44dddd';
+      ctx.font = `${10 * dpr}px monospace`;
+      ctx.fillText('Ty', tox + yDirX + 3 * dpr, toy + yDirY + 3 * dpr);
+    }
+
+    // Text cursor dot
+    ctx.beginPath();
+    ctx.arc(tox, toy, 4 * dpr, 0, Math.PI * 2);
+    ctx.fillStyle = '#4488ff';
+    ctx.globalAlpha = 0.85;
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1 * dpr;
+    ctx.stroke();
   }
 
   ctx.restore();
