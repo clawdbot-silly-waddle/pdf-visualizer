@@ -7,12 +7,20 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.5.207",
     "typescript": "^5.9.3",
     "vite": "^8.0.1"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^0.1.97",
+    "@types/pako": "^2.0.4",
+    "pako": "^2.1.0",
+    "vitest": "^4.1.2"
   }
 }
