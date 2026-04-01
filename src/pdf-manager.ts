@@ -99,7 +99,13 @@ export class PdfManager {
         return [];
       }
 
-      const text = new TextDecoder('latin1').decode(rawBytes);
+      // Decode bytes 1:1 to Unicode code points. Can NOT use TextDecoder('latin1')
+      // because the WHATWG spec maps it to Windows-1252, which remaps bytes 0x80-0x9F
+      // to higher code points (e.g. 0x85→U+2026) that don't round-trip with & 0xff.
+      let text = '';
+      for (let i = 0; i < rawBytes.length; i++) {
+        text += String.fromCharCode(rawBytes[i]);
+      }
       return parseContentStream(text);
     } catch (e) {
       console.error('Failed to extract content stream ops:', e);
