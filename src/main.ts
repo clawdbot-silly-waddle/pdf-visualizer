@@ -77,6 +77,13 @@ class App {
       this.renderer.invalidate();
     };
 
+    // Apply persisted settings
+    const saved = this.settingsPanel.settings;
+    this.renderer.overlayEnabled = saved.overlayEnabled;
+    this.renderer.stateOverlayEnabled = saved.stateOverlayEnabled;
+    this.renderer.customDpr = saved.renderScale;
+    this.skipInertOps = saved.skipInertOps;
+
     this.playback.onTick = () => this.playTick();
     this.playback.onStateChange = (playing) => {
       this.playBtn.textContent = playing ? '⏸' : '▶';

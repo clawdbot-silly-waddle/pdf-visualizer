@@ -20,6 +20,28 @@ const SCALE_OPTIONS: { label: string; value: number | 'auto' }[] = [
   { label: '10×', value: 10 },
 ];
 
+const STORAGE_KEY = 'pdf-visualizer-settings';
+
+function loadSettings(): Settings {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      return {
+        overlayEnabled: typeof saved.overlayEnabled === 'boolean' ? saved.overlayEnabled : true,
+        stateOverlayEnabled: typeof saved.stateOverlayEnabled === 'boolean' ? saved.stateOverlayEnabled : false,
+        skipInertOps: typeof saved.skipInertOps === 'boolean' ? saved.skipInertOps : false,
+        renderScale: saved.renderScale === 'auto' || typeof saved.renderScale === 'number' ? saved.renderScale : 'auto',
+      };
+    }
+  } catch { /* ignore */ }
+  return { overlayEnabled: true, stateOverlayEnabled: false, skipInertOps: false, renderScale: 'auto' };
+}
+
+function saveSettings(s: Settings): void {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* ignore */ }
+}
+
 export class SettingsPanel {
   private btn: HTMLButtonElement;
   private panel: HTMLDivElement;
@@ -27,12 +49,7 @@ export class SettingsPanel {
 
   onChange: ((settings: Settings) => void) | null = null;
 
-  private _settings: Settings = {
-    overlayEnabled: true,
-    stateOverlayEnabled: false,
-    skipInertOps: false,
-    renderScale: 'auto',
-  };
+  private _settings: Settings = loadSettings();
 
   get settings(): Settings {
     return { ...this._settings };
@@ -136,6 +153,12 @@ export class SettingsPanel {
     skipRow.appendChild(skipToggle);
     this.panel.appendChild(skipRow);
 
+    // Apply initial skip-inert state to overlay row
+    if (this._settings.skipInertOps) {
+      overlayToggle.disabled = true;
+      overlayRow.classList.add('disabled');
+    }
+
     // Render scale dropdown
     const scaleRow = document.createElement('label');
     scaleRow.className = 'settings-row';
@@ -163,6 +186,7 @@ export class SettingsPanel {
   }
 
   private emitChange() {
+    saveSettings(this._settings);
     this.onChange?.(this.settings);
   }
 }
