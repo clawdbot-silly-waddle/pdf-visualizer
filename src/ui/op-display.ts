@@ -4,6 +4,7 @@
 
 import type { ContentStreamOp } from '../content-stream';
 import { getOpInfo, getCategoryColor, getCategoryLabel } from '../operator-info';
+import { decodeForDisplay } from '../display-decode';
 
 export class OpDisplay {
   private container: HTMLElement;
@@ -26,7 +27,7 @@ export class OpDisplay {
       this.container.innerHTML = `
         <div class="op-current">
           <span class="op-badge" style="background-color: ${getCategoryColor(info.category)}">${getCategoryLabel(info.category)}</span>
-          <code class="op-current-code">${this.escapeHtml(op.raw)}</code>
+          <code class="op-current-code">${this.escapeHtml(decodeForDisplay(op.raw))}</code>
           <span class="op-current-desc">${info.description}</span>
         </div>
       `;

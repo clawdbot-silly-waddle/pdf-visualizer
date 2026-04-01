@@ -4,6 +4,7 @@
 
 import type { ContentStreamOp } from '../content-stream';
 import { getOpInfo, getCategoryColor, getCategoryLabel } from '../operator-info';
+import { decodeForDisplay } from '../display-decode';
 
 export class OpListPanel {
   private container: HTMLElement;
@@ -34,7 +35,7 @@ export class OpListPanel {
 
       const opText = document.createElement('span');
       opText.className = 'op-text';
-      opText.textContent = this.formatOpShort(op);
+      opText.textContent = decodeForDisplay(this.formatOpShort(op));
 
       el.appendChild(num);
       el.appendChild(badge);
