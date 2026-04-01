@@ -1,8 +1,10 @@
 /**
  * Renderer — manages canvas sizing, DPR-aware rendering, and render scheduling.
+ * Draws the pdfjs-rendered bitmap, then overlays in-progress paths as wireframes.
  */
 
 import type { PdfManager, PageInfo } from './pdf-manager';
+import { computeOverlayAt, drawOverlay } from './path-overlay';
 
 export class Renderer {
   private canvas: HTMLCanvasElement;
@@ -87,6 +89,19 @@ export class Renderer {
       this.ctx.imageSmoothingEnabled = true;
       this.ctx.imageSmoothingQuality = 'high';
       this.ctx.drawImage(bitmap, 0, 0, this.canvas.width, this.canvas.height);
+
+      // Draw path overlay if there's an in-progress path
+      const overlay = computeOverlayAt(this.pageInfo.ops, opToRender);
+      if (overlay) {
+        drawOverlay(
+          this.ctx,
+          overlay,
+          this.pageInfo.width,
+          this.pageInfo.height,
+          this.canvas.width,
+          this.canvas.height,
+        );
+      }
 
       this.lastRenderedOp = opToRender;
     } catch (e) {
