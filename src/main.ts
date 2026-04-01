@@ -86,7 +86,9 @@ class App {
 
     this.playback.onTick = () => this.playTick();
     this.playback.onStateChange = (playing) => {
-      this.playBtn.textContent = playing ? '⏸' : '▶';
+      this.playBtn.innerHTML = playing
+        ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="5" y="4" width="5" height="16"/><rect x="14" y="4" width="5" height="16"/></svg>'
+        : '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>';
       this.playBtn.title = playing ? 'Pause (Space)' : 'Play (Space)';
     };
   }
