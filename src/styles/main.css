@@ -209,6 +209,7 @@ html, body {
   flex-direction: column;
   gap: 0.5rem;
   flex-shrink: 0;
+  position: relative;
 }
 
 #op-display {
@@ -306,7 +307,6 @@ html, body {
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
-  position: relative;
 }
 
 .btn-group {
@@ -360,16 +360,19 @@ html, body {
 
 /* ===== Settings Panel ===== */
 .settings-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
   background: var(--bg-raised);
   border: 1px solid var(--border);
   color: var(--text-muted);
-  padding: 0.4rem 0.6rem;
+  padding: 0.3rem 0.45rem;
   border-radius: var(--radius-sm);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   line-height: 1;
-  position: relative;
+  z-index: 10;
 }
 
 .settings-btn:hover,
@@ -381,8 +384,8 @@ html, body {
 .settings-panel {
   display: none;
   position: absolute;
-  bottom: calc(100% + 0.5rem);
-  right: 0;
+  bottom: calc(100% + 0.25rem);
+  right: 0.5rem;
   background: var(--bg-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius);

@@ -65,7 +65,7 @@ class App {
     this.thumbnails = new ThumbnailSidebar(document.getElementById('thumb-container')!);
     this.thumbnails.onPageSelect = (i) => this.selectPage(i);
 
-    this.settingsPanel = new SettingsPanel(document.getElementById('btn-row')!);
+    this.settingsPanel = new SettingsPanel(document.getElementById('controls')!);
     this.settingsPanel.onChange = (s) => {
       this.renderer.overlayEnabled = s.overlayEnabled;
       this.renderer.customDpr = s.renderScale;
