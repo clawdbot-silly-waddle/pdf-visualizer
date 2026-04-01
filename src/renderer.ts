@@ -6,6 +6,7 @@
 import type { PdfManager, PageInfo } from './pdf-manager';
 import type { ContentStreamOp } from './content-stream';
 import { computeOverlayAt, drawOverlay } from './path-overlay';
+import { computeStateAt, drawStateOverlay } from './state-overlay';
 
 /**
  * Operators that don't change the pdfjs bitmap output — only affect state for
@@ -53,6 +54,7 @@ export class Renderer {
   private cachedBitmapScale = -1;
 
   overlayEnabled = true;
+  stateOverlayEnabled = false;
   customDpr: number | 'auto' = 'auto';
 
   constructor(canvas: HTMLCanvasElement, pdf: PdfManager) {
@@ -166,6 +168,20 @@ export class Renderer {
             dpr,
           );
         }
+      }
+
+      // Draw state visualization overlay (CTM axes, current point, clip areas)
+      if (this.stateOverlayEnabled) {
+        const state = computeStateAt(this.pageInfo.ops, opToRender);
+        drawStateOverlay(
+          this.ctx,
+          state,
+          this.pageInfo.width,
+          this.pageInfo.height,
+          this.canvas.width,
+          this.canvas.height,
+          dpr,
+        );
       }
 
       this.lastRenderedOp = opToRender;

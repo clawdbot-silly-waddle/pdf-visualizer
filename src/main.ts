@@ -68,6 +68,7 @@ class App {
     this.settingsPanel = new SettingsPanel(document.getElementById('controls')!);
     this.settingsPanel.onChange = (s) => {
       this.renderer.overlayEnabled = s.overlayEnabled;
+      this.renderer.stateOverlayEnabled = s.stateOverlayEnabled;
       this.renderer.customDpr = s.renderScale;
       this.pdf.clearRenderCache();
       this.renderer.invalidate();

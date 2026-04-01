@@ -5,6 +5,7 @@
 
 export interface Settings {
   overlayEnabled: boolean;
+  stateOverlayEnabled: boolean;
   renderScale: number | 'auto';
 }
 
@@ -27,6 +28,7 @@ export class SettingsPanel {
 
   private _settings: Settings = {
     overlayEnabled: true,
+    stateOverlayEnabled: false,
     renderScale: 'auto',
   };
 
@@ -86,6 +88,25 @@ export class SettingsPanel {
     });
     overlayRow.appendChild(overlayToggle);
     this.panel.appendChild(overlayRow);
+
+    // State debug overlay toggle
+    const stateRow = document.createElement('label');
+    stateRow.className = 'settings-row';
+
+    const stateLabel = document.createElement('span');
+    stateLabel.textContent = 'State debug';
+    stateRow.appendChild(stateLabel);
+
+    const stateToggle = document.createElement('input');
+    stateToggle.type = 'checkbox';
+    stateToggle.className = 'settings-toggle';
+    stateToggle.checked = this._settings.stateOverlayEnabled;
+    stateToggle.addEventListener('change', () => {
+      this._settings.stateOverlayEnabled = stateToggle.checked;
+      this.emitChange();
+    });
+    stateRow.appendChild(stateToggle);
+    this.panel.appendChild(stateRow);
 
     // Render scale dropdown
     const scaleRow = document.createElement('label');
