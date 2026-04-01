@@ -258,7 +258,7 @@ export function drawOverlay(
   // Draw dots at path vertices for clarity
   ctx.setLineDash([]);
   ctx.fillStyle = '#00ffff';
-  ctx.globalAlpha = 0.6;
+  ctx.globalAlpha = 1;
   for (const seg of path) {
     if (seg.type === 'Z') continue;
     const lastIdx = seg.points.length - 2;
