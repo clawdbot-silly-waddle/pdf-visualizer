@@ -99,13 +99,9 @@ export class PdfManager {
         return [];
       }
 
-      // Decode bytes 1:1 to Unicode code points. Can NOT use TextDecoder('latin1')
-      // because the WHATWG spec maps it to Windows-1252, which remaps bytes 0x80-0x9F
-      // to higher code points (e.g. 0x85→U+2026) that don't round-trip with & 0xff.
-      let text = '';
-      for (let i = 0; i < rawBytes.length; i++) {
-        text += String.fromCharCode(rawBytes[i]);
-      }
+      // Decode bytes 1:1 to code points. TextDecoder('latin1') actually uses
+      // Windows-1252 per WHATWG, remapping 0x80-0x9F to higher code points.
+      const text = Array.from(rawBytes, (b) => String.fromCharCode(b)).join('');
       return parseContentStream(text);
     } catch (e) {
       console.error('Failed to extract content stream ops:', e);
@@ -281,13 +277,8 @@ export class PdfManager {
     const pdfLibDoc = await PDFDocument.load(this.pdfBytes!, { ignoreEncryption: true });
     const page = pdfLibDoc.getPages()[pageIndex];
 
-    // Must encode as Latin-1 (single byte per char) to preserve raw PDF byte values.
-    // The stream was decoded with TextDecoder('latin1'), so each JS char maps 1:1 to a byte.
-    // Using TextEncoder (UTF-8) would corrupt chars > 127 with multi-byte sequences.
-    const encoded = new Uint8Array(newContentStream.length);
-    for (let i = 0; i < newContentStream.length; i++) {
-      encoded[i] = newContentStream.charCodeAt(i) & 0xff;
-    }
+    // Encode string back to raw bytes (1 byte per char, inverse of the decode).
+    const encoded = Uint8Array.from(newContentStream, (c) => c.charCodeAt(0));
     const newStream = pdfLibDoc.context.stream(encoded);
     const newStreamRef = pdfLibDoc.context.register(newStream);
 
