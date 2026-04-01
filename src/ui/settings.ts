@@ -6,6 +6,7 @@
 export interface Settings {
   overlayEnabled: boolean;
   stateOverlayEnabled: boolean;
+  skipInertOps: boolean;
   renderScale: number | 'auto';
 }
 
@@ -29,6 +30,7 @@ export class SettingsPanel {
   private _settings: Settings = {
     overlayEnabled: true,
     stateOverlayEnabled: false,
+    skipInertOps: false,
     renderScale: 'auto',
   };
 
@@ -107,6 +109,32 @@ export class SettingsPanel {
     });
     stateRow.appendChild(stateToggle);
     this.panel.appendChild(stateRow);
+
+    // Skip inert ops toggle
+    const skipRow = document.createElement('label');
+    skipRow.className = 'settings-row';
+
+    const skipLabel = document.createElement('span');
+    skipLabel.textContent = 'Visual ops only';
+    skipRow.appendChild(skipLabel);
+
+    const skipToggle = document.createElement('input');
+    skipToggle.type = 'checkbox';
+    skipToggle.className = 'settings-toggle';
+    skipToggle.checked = this._settings.skipInertOps;
+    skipToggle.addEventListener('change', () => {
+      this._settings.skipInertOps = skipToggle.checked;
+      // Disable path overlay when skipping inert ops (path overlay needs path construction ops)
+      overlayToggle.disabled = skipToggle.checked;
+      overlayRow.classList.toggle('disabled', skipToggle.checked);
+      if (skipToggle.checked) {
+        this._settings.overlayEnabled = false;
+        overlayToggle.checked = false;
+      }
+      this.emitChange();
+    });
+    skipRow.appendChild(skipToggle);
+    this.panel.appendChild(skipRow);
 
     // Render scale dropdown
     const scaleRow = document.createElement('label');

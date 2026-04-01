@@ -7,22 +7,7 @@ import type { PdfManager, PageInfo } from './pdf-manager';
 import type { ContentStreamOp } from './content-stream';
 import { computeOverlayAt, drawOverlay } from './path-overlay';
 import { computeStateAt, drawStateOverlay } from './state-overlay';
-
-/**
- * Operators that don't change the pdfjs bitmap output — only affect state for
- * future drawing. Stepping over these skips the expensive pdfjs re-render and
- * reuses the previous bitmap, updating only the overlay.
- */
-const INERT_OPS = new Set([
-  // Path construction (accumulates path buffer, no visual output)
-  'm', 'l', 'c', 'v', 'y', 'h', 're',
-  // Graphics state
-  'q', 'Q', 'cm', 'w', 'J', 'j', 'M', 'd', 'gs', 'ri', 'i',
-  // Color
-  'g', 'G', 'rg', 'RG', 'k', 'K', 'cs', 'CS', 'sc', 'SC', 'scn', 'SCN',
-  // Text state
-  'Tf', 'Tc', 'Tw', 'Tz', 'TL', 'Ts', 'Tr',
-]);
+import { INERT_OPS } from './inert-ops';
 
 /**
  * Find the op index that produces the same pdfjs bitmap as opIndex.

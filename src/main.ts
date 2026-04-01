@@ -9,6 +9,7 @@ import { OpListPanel } from './ui/op-list';
 import { OpDisplay } from './ui/op-display';
 import { ThumbnailSidebar } from './ui/thumbnails';
 import { SettingsPanel } from './ui/settings';
+import { INERT_OPS } from './inert-ops';
 
 class App {
   private pdf = new PdfManager();
@@ -16,6 +17,7 @@ class App {
   private currentOp = 0;
   private totalOps = 0;
   private pageInfo: PageInfo | null = null;
+  private skipInertOps = false;
 
   // Modules
   private renderer!: Renderer;
@@ -70,6 +72,7 @@ class App {
       this.renderer.overlayEnabled = s.overlayEnabled;
       this.renderer.stateOverlayEnabled = s.stateOverlayEnabled;
       this.renderer.customDpr = s.renderScale;
+      this.skipInertOps = s.skipInertOps;
       this.pdf.clearRenderCache();
       this.renderer.invalidate();
     };
@@ -131,6 +134,15 @@ class App {
     // Seeker
     this.seekerSlider.addEventListener('input', () => {
       this.currentOp = parseInt(this.seekerSlider.value, 10);
+
+      // Snap to nearest visual op when skip is enabled
+      if (this.skipInertOps && this.pageInfo && this.currentOp > 0 && this.currentOp < this.totalOps) {
+        const ops = this.pageInfo.ops;
+        while (this.currentOp < this.totalOps && INERT_OPS.has(ops[this.currentOp - 1]?.operator)) {
+          this.currentOp++;
+        }
+      }
+
       this.updateDisplay();
       this.renderer.scheduleRender(this.currentOp);
     });
@@ -243,7 +255,24 @@ class App {
   }
 
   private step(delta: number) {
-    this.seekTo(this.currentOp + delta);
+    if (!this.skipInertOps || !this.pageInfo) {
+      this.seekTo(this.currentOp + delta);
+      return;
+    }
+
+    // Skip over inert ops to the next visual op
+    const ops = this.pageInfo.ops;
+    let target = this.currentOp + delta;
+    if (delta > 0) {
+      while (target <= this.totalOps && target > 0 && INERT_OPS.has(ops[target - 1]?.operator)) {
+        target++;
+      }
+    } else {
+      while (target > 0 && INERT_OPS.has(ops[target - 1]?.operator)) {
+        target--;
+      }
+    }
+    this.seekTo(target);
   }
 
   private togglePlay() {
@@ -255,6 +284,15 @@ class App {
 
   private async playTick(): Promise<void> {
     this.currentOp++;
+
+    // Skip inert ops during playback
+    if (this.skipInertOps && this.pageInfo) {
+      const ops = this.pageInfo.ops;
+      while (this.currentOp <= this.totalOps && this.currentOp > 0 && INERT_OPS.has(ops[this.currentOp - 1]?.operator)) {
+        this.currentOp++;
+      }
+    }
+
     if (this.currentOp > this.totalOps) {
       this.playback.stop();
       this.currentOp = this.totalOps;

@@ -411,6 +411,11 @@ html, body {
   cursor: pointer;
 }
 
+.settings-row.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .settings-toggle {
   appearance: none;
   -webkit-appearance: none;
