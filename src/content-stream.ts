@@ -9,37 +9,6 @@ export interface ContentStreamOp {
   raw: string;
 }
 
-const OPERATORS = new Set([
-  // Path construction
-  'm', 'l', 'c', 'v', 'y', 'h', 're',
-  // Path painting
-  'S', 's', 'f', 'F', 'f*', 'B', 'B*', 'b', 'b*', 'n',
-  // Clipping
-  'W', 'W*',
-  // Graphics state
-  'q', 'Q', 'cm', 'w', 'J', 'j', 'M', 'd', 'ri', 'i', 'gs',
-  // Color
-  'CS', 'cs', 'SC', 'SCN', 'sc', 'scn', 'G', 'g', 'RG', 'rg', 'K', 'k',
-  // Text state
-  'Tc', 'Tw', 'Tz', 'TL', 'Tf', 'Tr', 'Ts',
-  // Text positioning
-  'Td', 'TD', 'Tm', 'T*',
-  // Text showing
-  'Tj', 'TJ', "'", '"',
-  // Text object
-  'BT', 'ET',
-  // XObject
-  'Do',
-  // Inline image
-  'BI', 'ID', 'EI',
-  // Marked content
-  'BMC', 'BDC', 'EMC', 'MP', 'DP',
-  // Compatibility
-  'BX', 'EX',
-  // Shading
-  'sh',
-]);
-
 type Token =
   | { type: 'number'; value: string }
   | { type: 'name'; value: string }
