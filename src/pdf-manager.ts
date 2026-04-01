@@ -275,7 +275,13 @@ export class PdfManager {
     const pdfLibDoc = await PDFDocument.load(this.pdfBytes!, { ignoreEncryption: true });
     const page = pdfLibDoc.getPages()[pageIndex];
 
-    const encoded = new TextEncoder().encode(newContentStream);
+    // Must encode as Latin-1 (single byte per char) to preserve raw PDF byte values.
+    // The stream was decoded with TextDecoder('latin1'), so each JS char maps 1:1 to a byte.
+    // Using TextEncoder (UTF-8) would corrupt chars > 127 with multi-byte sequences.
+    const encoded = new Uint8Array(newContentStream.length);
+    for (let i = 0; i < newContentStream.length; i++) {
+      encoded[i] = newContentStream.charCodeAt(i) & 0xff;
+    }
     const newStream = pdfLibDoc.context.stream(encoded);
     const newStreamRef = pdfLibDoc.context.register(newStream);
 
