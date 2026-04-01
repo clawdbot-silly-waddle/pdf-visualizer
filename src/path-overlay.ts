@@ -207,6 +207,7 @@ export function drawOverlay(
   pageHeight: number,
   canvasWidth: number,
   canvasHeight: number,
+  dpr = 1,
 ): void {
   const scaleX = canvasWidth / pageWidth;
   const scaleY = canvasHeight / pageHeight;
@@ -220,10 +221,10 @@ export function drawOverlay(
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-  // Wireframe style: dashed cyan, semi-transparent
+  // Wireframe style: dashed cyan, semi-transparent — scale with DPR for consistent screen size
   ctx.strokeStyle = '#00ffff';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 4]);
+  ctx.lineWidth = 2 * dpr;
+  ctx.setLineDash([6 * dpr, 4 * dpr]);
   ctx.globalAlpha = 0.85;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -264,7 +265,7 @@ export function drawOverlay(
     const lastIdx = seg.points.length - 2;
     const [px, py] = toCanvas(seg.points[lastIdx], seg.points[lastIdx + 1]);
     ctx.beginPath();
-    ctx.arc(px, py, 3, 0, Math.PI * 2);
+    ctx.arc(px, py, 3 * dpr, 0, Math.PI * 2);
     ctx.fill();
   }
 

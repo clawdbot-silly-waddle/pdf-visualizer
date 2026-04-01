@@ -118,6 +118,7 @@ export class Renderer {
             this.pageInfo.height,
             this.canvas.width,
             this.canvas.height,
+            dpr,
           );
         }
       }
