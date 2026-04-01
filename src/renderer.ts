@@ -4,7 +4,36 @@
  */
 
 import type { PdfManager, PageInfo } from './pdf-manager';
+import type { ContentStreamOp } from './content-stream';
 import { computeOverlayAt, drawOverlay } from './path-overlay';
+
+/**
+ * Operators that don't change the pdfjs bitmap output — only affect state for
+ * future drawing. Stepping over these skips the expensive pdfjs re-render and
+ * reuses the previous bitmap, updating only the overlay.
+ */
+const INERT_OPS = new Set([
+  // Path construction (accumulates path buffer, no visual output)
+  'm', 'l', 'c', 'v', 'y', 'h', 're',
+  // Graphics state
+  'q', 'Q', 'cm', 'w', 'J', 'j', 'M', 'd', 'gs', 'ri', 'i',
+  // Color
+  'g', 'G', 'rg', 'RG', 'k', 'K', 'cs', 'CS', 'sc', 'SC', 'scn', 'SCN',
+  // Text state
+  'Tf', 'Tc', 'Tw', 'Tz', 'TL', 'Ts', 'Tr',
+]);
+
+/**
+ * Find the op index that produces the same pdfjs bitmap as opIndex.
+ * Walks backward to find the last visual (non-inert) op; everything after
+ * it is state-only and doesn't change the rendered output.
+ */
+function findEffectiveBitmapOp(ops: ContentStreamOp[], opIndex: number): number {
+  for (let i = Math.min(opIndex, ops.length) - 1; i >= 0; i--) {
+    if (!INERT_OPS.has(ops[i].operator)) return i + 1;
+  }
+  return 0;
+}
 
 export class Renderer {
   private canvas: HTMLCanvasElement;
@@ -19,6 +48,9 @@ export class Renderer {
 
   private currentPageIndex = -1;
   private pageInfo: PageInfo | null = null;
+  private cachedBitmap: ImageBitmap | null = null;
+  private cachedBitmapEffOp = -1;
+  private cachedBitmapScale = -1;
 
   overlayEnabled = true;
   customDpr: number | 'auto' = 'auto';
@@ -34,11 +66,17 @@ export class Renderer {
     this.pageInfo = pageInfo;
     this.wantedOp = -1;
     this.lastRenderedOp = -1;
+    this.cachedBitmap = null;
+    this.cachedBitmapEffOp = -1;
+    this.cachedBitmapScale = -1;
   }
 
   /** Force a re-render even if the op index hasn't changed (e.g. after settings change). */
   invalidate(): void {
     this.settingsGen++;
+    this.cachedBitmap = null;
+    this.cachedBitmapEffOp = -1;
+    this.cachedBitmapScale = -1;
     this.scheduleRender(this.wantedOp);
   }
 
@@ -91,12 +129,19 @@ export class Renderer {
       }
 
       const renderScale = (cssWidth * dpr) / this.pageInfo.width;
+      const scale = Math.max(renderScale, 1);
 
-      const bitmap = await this.pdf.renderPartial(
-        this.currentPageIndex,
-        opToRender,
-        Math.max(renderScale, 1),
-      );
+      // Skip pdfjs re-render if only inert ops changed since last bitmap
+      const effOp = findEffectiveBitmapOp(this.pageInfo.ops, opToRender);
+      let bitmap: ImageBitmap;
+      if (this.cachedBitmap && effOp === this.cachedBitmapEffOp && scale === this.cachedBitmapScale) {
+        bitmap = this.cachedBitmap;
+      } else {
+        bitmap = await this.pdf.renderPartial(this.currentPageIndex, effOp, scale);
+        this.cachedBitmap = bitmap;
+        this.cachedBitmapEffOp = effOp;
+        this.cachedBitmapScale = scale;
+      }
 
       this.canvas.width = Math.ceil(cssWidth * dpr);
       this.canvas.height = Math.ceil(cssHeight * dpr);
