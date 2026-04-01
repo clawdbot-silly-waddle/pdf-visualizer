@@ -4,6 +4,8 @@
  */
 
 import type { ContentStreamOp } from './content-stream';
+import { linearToPath } from './op-path';
+import { walkOpsUpTo } from './op-walker';
 
 interface PathSegment {
   type: 'M' | 'L' | 'C' | 'Z';
@@ -75,22 +77,25 @@ export interface OverlayResult {
 }
 
 /**
- * Walk ops[0..opIndex) and return the in-progress path (if any) plus current state.
+ * Walk ops up to opIndex (linear) and return the in-progress path (if any) plus current state.
  * Returns null if no path is being constructed at the given point.
  */
 export function computeOverlayAt(
   ops: ContentStreamOp[],
   opIndex: number,
 ): OverlayResult | null {
+  if (opIndex <= 0) return null;
+
   let state = defaultState();
   const stateStack: GraphicsState[] = [];
   let path: PathSegment[] = [];
   let curX = 0, curY = 0;
   let startX = 0, startY = 0;
 
-  const limit = Math.min(opIndex, ops.length);
-  for (let i = 0; i < limit; i++) {
-    const op = ops[i];
+  const opPath = linearToPath(ops, opIndex);
+  if (opPath.length === 0) return null;
+
+  walkOpsUpTo(ops, opPath, (op) => {
     const nums = op.operands.map(Number);
 
     switch (op.operator) {
@@ -190,7 +195,7 @@ export function computeOverlayAt(
         }
         break;
     }
-  }
+  });
 
   if (path.length === 0) return null;
   return { path, state };

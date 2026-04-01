@@ -5,6 +5,8 @@
  */
 
 import type { ContentStreamOp } from './content-stream';
+import { linearToPath } from './op-path';
+import { walkOpsUpTo } from './op-walker';
 
 type Matrix = [number, number, number, number, number, number];
 
@@ -53,7 +55,7 @@ function transformPoint(ctm: Matrix, x: number, y: number): [number, number] {
 }
 
 /**
- * Walk ops[0..opIndex) and compute the current graphics state.
+ * Walk ops up to opIndex (linear) and compute the current graphics state.
  */
 export function computeStateAt(
   ops: ContentStreamOp[],
@@ -74,9 +76,26 @@ export function computeStateAt(
   // Accumulate current path for potential clipping
   let pathSegs: ClipPath['segments'] = [];
 
-  const limit = Math.min(opIndex, ops.length);
-  for (let i = 0; i < limit; i++) {
-    const op = ops[i];
+  if (opIndex <= 0) {
+    return {
+      currentPoint: null,
+      ctm,
+      clipPaths,
+      text: null,
+    };
+  }
+
+  const opPath = linearToPath(ops, opIndex);
+  if (opPath.length === 0) {
+    return {
+      currentPoint: null,
+      ctm,
+      clipPaths,
+      text: null,
+    };
+  }
+
+  walkOpsUpTo(ops, opPath, (op) => {
     const nums = op.operands.map(Number);
 
     switch (op.operator) {
@@ -190,12 +209,10 @@ export function computeStateAt(
 
       // Text rendering (advance position is font-dependent, tracked as-is)
       case "'":
-        // Equivalent to T* then Tj
         textLineMatrix = concatMatrix(textLineMatrix, 1, 0, 0, 1, 0, -textLeading);
         textMatrix = [...textLineMatrix];
         break;
       case '"':
-        // Equivalent to Tw Tc T* Tj
         textLineMatrix = concatMatrix(textLineMatrix, 1, 0, 0, 1, 0, -textLeading);
         textMatrix = [...textLineMatrix];
         break;
@@ -208,7 +225,7 @@ export function computeStateAt(
         }
         break;
     }
-  }
+  });
 
   return {
     currentPoint: hasPoint ? { x: curX, y: curY } : null,

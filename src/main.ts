@@ -10,6 +10,7 @@ import { OpDisplay } from './ui/op-display';
 import { ThumbnailSidebar } from './ui/thumbnails';
 import { SettingsPanel } from './ui/settings';
 import { INERT_OPS } from './inert-ops';
+import { opAtLinear } from './op-path';
 
 class App {
   private pdf = new PdfManager();
@@ -144,10 +145,12 @@ class App {
     this.seekerSlider.addEventListener('input', () => {
       this.currentOp = parseInt(this.seekerSlider.value, 10);
 
-      // Snap to nearest visual op when skip is enabled
+      // Snap to nearest visual op when skip is enabled (tree-aware)
       if (this.skipInertOps && this.pageInfo && this.currentOp > 0 && this.currentOp < this.totalOps) {
         const ops = this.pageInfo.ops;
-        while (this.currentOp < this.totalOps && INERT_OPS.has(ops[this.currentOp - 1]?.operator)) {
+        while (this.currentOp < this.totalOps) {
+          const op = opAtLinear(ops, this.currentOp);
+          if (!op || !INERT_OPS.has(op.operator)) break;
           this.currentOp++;
         }
       }
@@ -227,7 +230,7 @@ class App {
 
     try {
       this.pageInfo = await this.pdf.getPageInfo(pageIndex);
-      this.totalOps = this.pageInfo.ops.length;
+      this.totalOps = this.pageInfo.totalOps;
       this.currentOp = this.totalOps;
 
       this.seekerSlider.max = String(this.totalOps);
@@ -269,15 +272,19 @@ class App {
       return;
     }
 
-    // Skip over inert ops to the next visual op
+    // Skip over inert ops to the next visual op (tree-aware)
     const ops = this.pageInfo.ops;
     let target = this.currentOp + delta;
     if (delta > 0) {
-      while (target <= this.totalOps && target > 0 && INERT_OPS.has(ops[target - 1]?.operator)) {
+      while (target <= this.totalOps && target > 0) {
+        const op = opAtLinear(ops, target);
+        if (!op || !INERT_OPS.has(op.operator)) break;
         target++;
       }
     } else {
-      while (target > 0 && INERT_OPS.has(ops[target - 1]?.operator)) {
+      while (target > 0) {
+        const op = opAtLinear(ops, target);
+        if (!op || !INERT_OPS.has(op.operator)) break;
         target--;
       }
     }
@@ -294,10 +301,12 @@ class App {
   private async playTick(): Promise<void> {
     this.currentOp++;
 
-    // Skip inert ops during playback
+    // Skip inert ops during playback (tree-aware)
     if (this.skipInertOps && this.pageInfo) {
       const ops = this.pageInfo.ops;
-      while (this.currentOp <= this.totalOps && this.currentOp > 0 && INERT_OPS.has(ops[this.currentOp - 1]?.operator)) {
+      while (this.currentOp <= this.totalOps && this.currentOp > 0) {
+        const op = opAtLinear(ops, this.currentOp);
+        if (!op || !INERT_OPS.has(op.operator)) break;
         this.currentOp++;
       }
     }

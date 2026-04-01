@@ -1,10 +1,12 @@
 /**
  * Operator list panel — builds, highlights, and manages the instruction list sidebar.
+ * Supports tree display with XObject children indented under their parent Do ops.
  */
 
 import type { ContentStreamOp } from '../content-stream';
 import { getOpInfo, getCategoryColor, getCategoryLabel } from '../operator-info';
 import { decodeForDisplay } from '../display-decode';
+import { countOps } from '../op-path';
 
 export class OpListPanel {
   private container: HTMLElement;
@@ -16,34 +18,64 @@ export class OpListPanel {
 
   build(ops: ContentStreamOp[]): void {
     this.container.innerHTML = '';
+    let linearIdx = 0;
 
-    for (let i = 0; i < ops.length; i++) {
-      const op = ops[i];
-      const info = getOpInfo(op.operator);
-      const el = document.createElement('div');
-      el.className = 'op-list-item';
-      el.dataset.index = String(i + 1);
+    const buildLevel = (ops: ContentStreamOp[], depth: number) => {
+      for (const op of ops) {
+        linearIdx++;
+        const el = document.createElement('div');
+        el.className = 'op-list-item';
+        el.dataset.index = String(linearIdx);
+        el.style.paddingLeft = `${8 + depth * 16}px`;
 
-      const num = document.createElement('span');
-      num.className = 'op-num';
-      num.textContent = String(i + 1);
+        const num = document.createElement('span');
+        num.className = 'op-num';
+        num.textContent = String(linearIdx);
 
-      const badge = document.createElement('span');
-      badge.className = 'op-badge';
-      badge.style.backgroundColor = getCategoryColor(info.category);
-      badge.textContent = getCategoryLabel(info.category);
+        if (op.children) {
+          // XObject header row
+          el.classList.add('op-xobject-header');
+          const badge = document.createElement('span');
+          badge.className = 'op-badge xobject';
+          badge.textContent = 'XOBJ';
 
-      const opText = document.createElement('span');
-      opText.className = 'op-text';
-      opText.textContent = decodeForDisplay(this.formatOpShort(op));
+          const opText = document.createElement('span');
+          opText.className = 'op-text';
+          const childCount = countOps(op.children);
+          opText.textContent = `Do ${op.xobjectMeta?.name ?? ''} (${childCount} ops)`;
 
-      el.appendChild(num);
-      el.appendChild(badge);
-      el.appendChild(opText);
-      this.container.appendChild(el);
+          el.appendChild(num);
+          el.appendChild(badge);
+          el.appendChild(opText);
+        } else {
+          const info = getOpInfo(op.operator);
+          const badge = document.createElement('span');
+          badge.className = 'op-badge';
+          badge.style.backgroundColor = getCategoryColor(info.category);
+          badge.textContent = getCategoryLabel(info.category);
 
-      el.addEventListener('click', () => this.onSeek?.(i + 1));
-    }
+          const opText = document.createElement('span');
+          opText.className = 'op-text';
+          opText.textContent = decodeForDisplay(this.formatOpShort(op));
+
+          el.appendChild(num);
+          el.appendChild(badge);
+          el.appendChild(opText);
+        }
+
+        this.container.appendChild(el);
+
+        const idx = linearIdx;
+        el.addEventListener('click', () => this.onSeek?.(idx));
+
+        // Recursively add children
+        if (op.children) {
+          buildLevel(op.children, depth + 1);
+        }
+      }
+    };
+
+    buildLevel(ops, 0);
   }
 
   highlight(currentOp: number): void {

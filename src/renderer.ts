@@ -8,15 +8,16 @@ import type { ContentStreamOp } from './content-stream';
 import { computeOverlayAt, drawOverlay } from './path-overlay';
 import { computeStateAt, drawStateOverlay } from './state-overlay';
 import { INERT_OPS } from './inert-ops';
+import { opAtLinear } from './op-path';
 
 /**
  * Find the op index that produces the same pdfjs bitmap as opIndex.
- * Walks backward to find the last visual (non-inert) op; everything after
- * it is state-only and doesn't change the rendered output.
+ * Walks backward through the tree to find the last visual (non-inert) op.
  */
-function findEffectiveBitmapOp(ops: ContentStreamOp[], opIndex: number): number {
-  for (let i = Math.min(opIndex, ops.length) - 1; i >= 0; i--) {
-    if (!INERT_OPS.has(ops[i].operator)) return i + 1;
+function findEffectiveBitmapOp(ops: ContentStreamOp[], opIndex: number, totalOps: number): number {
+  for (let i = Math.min(opIndex, totalOps); i >= 1; i--) {
+    const op = opAtLinear(ops, i);
+    if (op && !INERT_OPS.has(op.operator)) return i;
   }
   return 0;
 }
@@ -119,7 +120,7 @@ export class Renderer {
       const scale = Math.max(renderScale, 1);
 
       // Skip pdfjs re-render if only inert ops changed since last bitmap
-      const effOp = findEffectiveBitmapOp(this.pageInfo.ops, opToRender);
+      const effOp = findEffectiveBitmapOp(this.pageInfo.ops, opToRender, this.pageInfo.totalOps);
       let bitmap: ImageBitmap;
       if (this.cachedBitmap && effOp === this.cachedBitmapEffOp && scale === this.cachedBitmapScale) {
         bitmap = this.cachedBitmap;

@@ -642,3 +642,21 @@ html, body {
     font-size: 1rem;
   }
 }
+
+/* ===== XObject tree display ===== */
+.op-xobject-header {
+  background: rgba(100, 100, 255, 0.08);
+  border-left: 2px solid #6666ff;
+}
+.op-xobject-header .op-badge.xobject {
+  background: #4444aa;
+}
+
+/* ===== Breadcrumb for nested context ===== */
+.op-breadcrumb {
+  display: block;
+  font-size: 0.7rem;
+  color: #888;
+  margin-bottom: 2px;
+  letter-spacing: 0.3px;
+}

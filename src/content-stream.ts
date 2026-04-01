@@ -3,10 +3,23 @@
  * Tokenizes and parses PDF content stream operators for display and manipulation.
  */
 
+export interface XObjectMeta {
+  name: string;          // e.g., '/Fm0'
+  objNum: number;        // PDF object number for ref reconstruction
+  genNum: number;        // PDF generation number
+  bbox?: number[];       // [x1, y1, x2, y2]
+  matrix?: number[];     // [a, b, c, d, e, f]
+  hasGroup?: boolean;    // transparency group flag
+}
+
 export interface ContentStreamOp {
   operands: string[];
   operator: string;
   raw: string;
+  /** For Do operators invoking Form XObjects: the parsed child ops */
+  children?: ContentStreamOp[];
+  /** For Do operators: XObject metadata needed for rendering */
+  xobjectMeta?: XObjectMeta;
 }
 
 type Token =
