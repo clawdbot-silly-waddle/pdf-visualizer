@@ -94,7 +94,7 @@ export class SettingsPanel {
     stateRow.className = 'settings-row';
 
     const stateLabel = document.createElement('span');
-    stateLabel.textContent = 'State debug';
+    stateLabel.textContent = 'Show state';
     stateRow.appendChild(stateLabel);
 
     const stateToggle = document.createElement('input');

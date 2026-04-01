@@ -286,7 +286,7 @@ export function drawStateOverlay(
   // 2. Draw CTM axes at page origin
   ctx.globalAlpha = 0.9;
   ctx.setLineDash([]);
-  const axisLen = 40 * dpr;
+  const axisLen = 20 * dpr;
   const [ox, oy] = toCanvas(0, 0);
 
   // Transform unit vectors by CTM (direction only, normalized to axisLen)
@@ -366,7 +366,7 @@ export function drawStateOverlay(
     // Text matrix axes
     ctx.globalAlpha = 0.9;
     ctx.setLineDash([]);
-    const tAxisLen = 30 * dpr;
+    const tAxisLen = 15 * dpr;
 
     const [txRaw, tyRaw] = [trm[0], trm[1]];
     const [tyxRaw, tyyRaw] = [trm[2], trm[3]];
