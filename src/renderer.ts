@@ -14,9 +14,14 @@ export class Renderer {
   private renderPending = false;
   private wantedOp = -1;
   private lastRenderedOp = -1;
+  private settingsGen = 0;
+  private lastRenderedGen = 0;
 
   private currentPageIndex = -1;
   private pageInfo: PageInfo | null = null;
+
+  overlayEnabled = true;
+  customDpr: number | 'auto' = 'auto';
 
   constructor(canvas: HTMLCanvasElement, pdf: PdfManager) {
     this.canvas = canvas;
@@ -29,6 +34,12 @@ export class Renderer {
     this.pageInfo = pageInfo;
     this.wantedOp = -1;
     this.lastRenderedOp = -1;
+  }
+
+  /** Force a re-render even if the op index hasn't changed (e.g. after settings change). */
+  invalidate(): void {
+    this.settingsGen++;
+    this.scheduleRender(this.wantedOp);
   }
 
   scheduleRender(opIndex: number): void {
@@ -47,17 +58,23 @@ export class Renderer {
     await this.doRender();
   }
 
+  private getDpr(): number {
+    if (this.customDpr === 'auto') return window.devicePixelRatio || 1;
+    return this.customDpr;
+  }
+
   private async doRender(): Promise<void> {
     if (!this.pageInfo) return;
     if (this.isRendering) return;
 
     const opToRender = this.wantedOp;
-    if (opToRender === this.lastRenderedOp) return;
+    const gen = this.settingsGen;
+    if (opToRender === this.lastRenderedOp && gen === this.lastRenderedGen) return;
 
     this.isRendering = true;
 
     try {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = this.getDpr();
       const container = this.canvas.parentElement!;
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
@@ -90,27 +107,30 @@ export class Renderer {
       this.ctx.imageSmoothingQuality = 'high';
       this.ctx.drawImage(bitmap, 0, 0, this.canvas.width, this.canvas.height);
 
-      // Draw path overlay if there's an in-progress path
-      const overlay = computeOverlayAt(this.pageInfo.ops, opToRender);
-      if (overlay) {
-        drawOverlay(
-          this.ctx,
-          overlay,
-          this.pageInfo.width,
-          this.pageInfo.height,
-          this.canvas.width,
-          this.canvas.height,
-        );
+      // Draw path overlay if enabled and there's an in-progress path
+      if (this.overlayEnabled) {
+        const overlay = computeOverlayAt(this.pageInfo.ops, opToRender);
+        if (overlay) {
+          drawOverlay(
+            this.ctx,
+            overlay,
+            this.pageInfo.width,
+            this.pageInfo.height,
+            this.canvas.width,
+            this.canvas.height,
+          );
+        }
       }
 
       this.lastRenderedOp = opToRender;
+      this.lastRenderedGen = gen;
     } catch (e) {
       console.error('Render error:', e);
     } finally {
       this.isRendering = false;
     }
 
-    if (this.wantedOp !== this.lastRenderedOp) {
+    if (this.wantedOp !== this.lastRenderedOp || this.settingsGen !== this.lastRenderedGen) {
       this.doRender();
     }
   }

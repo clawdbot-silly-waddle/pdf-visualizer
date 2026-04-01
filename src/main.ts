@@ -8,6 +8,7 @@ import { Playback } from './ui/playback';
 import { OpListPanel } from './ui/op-list';
 import { OpDisplay } from './ui/op-display';
 import { ThumbnailSidebar } from './ui/thumbnails';
+import { SettingsPanel } from './ui/settings';
 
 class App {
   private pdf = new PdfManager();
@@ -22,6 +23,7 @@ class App {
   private opList!: OpListPanel;
   private opDisplay!: OpDisplay;
   private thumbnails!: ThumbnailSidebar;
+  private settingsPanel!: SettingsPanel;
 
   // DOM Elements (only those managed directly by App)
   private dropZone!: HTMLElement;
@@ -62,6 +64,14 @@ class App {
 
     this.thumbnails = new ThumbnailSidebar(document.getElementById('thumb-container')!);
     this.thumbnails.onPageSelect = (i) => this.selectPage(i);
+
+    this.settingsPanel = new SettingsPanel(document.getElementById('btn-row')!);
+    this.settingsPanel.onChange = (s) => {
+      this.renderer.overlayEnabled = s.overlayEnabled;
+      this.renderer.customDpr = s.renderScale;
+      this.pdf.clearRenderCache();
+      this.renderer.invalidate();
+    };
 
     this.playback.onTick = () => this.playTick();
     this.playback.onStateChange = (playing) => {
