@@ -15,6 +15,7 @@ const SCALE_OPTIONS: { label: string; value: number | 'auto' }[] = [
   { label: '1.5×', value: 1.5 },
   { label: '2×', value: 2 },
   { label: '3×', value: 3 },
+  { label: '10×', value: 10 },
 ];
 
 export class SettingsPanel {
